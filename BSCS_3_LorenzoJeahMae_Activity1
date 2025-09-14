@@ -1,0 +1,104 @@
+from PIL import Image, ImageDraw, ImageFont
+
+# === 1. Create background ===
+img = Image.new("RGB", (800, 600), color=(255, 240, 200))  # Light peach
+draw = ImageDraw.Draw(img)
+
+# === 2. Load font ===
+try:
+    font_path = "C:/Windows/Fonts/times.ttf"
+    font = ImageFont.truetype(font_path, size=36)
+except IOError:
+    font = ImageFont.load_default()
+
+# === 3. Texts ===
+top_text = "When you're the mascot"
+speech_texts = [
+    "When you realize you've missed a rehearsal!",
+    "But your head falls off mid-performance!"
+]
+
+text_color = (0, 0, 0)  # black
+
+# === 4. Draw top text (centered) ===
+top_bbox = draw.textbbox((0, 0), top_text, font=font)
+top_text_width = top_bbox[2] - top_bbox[0]
+top_text_position = ((img.width - top_text_width) // 2, 30)
+draw.text(top_text_position, top_text, font=font, fill=text_color)
+
+# === 5. Draw mascot head lower ===
+# NEW POSITION: lower the mascot by ~100px
+head_x, head_y = 350, 350  # moved down from y=250
+head_radius = 50
+draw.ellipse(
+    [head_x, head_y, head_x + head_radius * 2, head_y + head_radius * 2],
+    outline="black", width=5
+)
+draw.line(
+    (head_x, head_y + head_radius, head_x + head_radius * 2, head_y + head_radius),
+    fill="black", width=5
+)
+
+# === 6. Wrap text lines ===
+def wrap_text(text, font, max_width):
+    lines = []
+    words = text.split()
+    line = ""
+    for word in words:
+        test_line = f"{line} {word}".strip()
+        width = draw.textlength(test_line, font=font)
+        if width <= max_width:
+            line = test_line
+        else:
+            lines.append(line)
+            line = word
+    if line:
+        lines.append(line)
+    return lines
+
+# === 7. Combine all speech lines ===
+bubble_x = 100
+bubble_y = 80
+bubble_width = 600
+wrapped_lines = []
+
+for text in speech_texts:
+    wrapped = wrap_text(text, font, bubble_width - 40)
+    wrapped_lines.extend(wrapped)
+
+# Calculate bubble height based on total lines
+line_height = font.getbbox("Ay")[3] - font.getbbox("Ay")[1] + 10
+bubble_height = len(wrapped_lines) * line_height + 30
+
+# === 8. Draw speech bubble ===
+# Rectangle
+draw.rectangle(
+    [bubble_x, bubble_y, bubble_x + bubble_width, bubble_y + bubble_height],
+    fill="lightgray", outline="black", width=3
+)
+
+# Adjust tail to point downward to new mascot position
+tail_center_x = head_x + head_radius  # center of the mascot head
+tail_top_y = bubble_y + bubble_height
+tail_tip_y = head_y - 10  # just above the head
+
+draw.polygon(
+    [
+        (tail_center_x - 15, tail_top_y),
+        (tail_center_x + 15, tail_top_y),
+        (tail_center_x, tail_tip_y)
+    ],
+    fill="lightgray", outline="black"
+)
+
+# === 9. Draw all wrapped lines inside bubble ===
+current_y = bubble_y + 15
+for line in wrapped_lines:
+    line_width = draw.textlength(line, font=font)
+    x_position = bubble_x + (bubble_width - line_width) // 2
+    draw.text((x_position, current_y), line, font=font, fill="black")
+    current_y += line_height
+
+# === 10. Save and show ===
+img.save("behind_the_scenes_meme.png")
+img.show()
